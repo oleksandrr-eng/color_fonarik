@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pocket Flashlight</title>
+<meta name="theme-color" content="#0b0f17">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700&family=Manrope:wght@600&display=swap">
+<style>
+/* Layout: dark night-blue page, a 3x3 block of color screens in the middle, a large power button at the bottom center. A color screen paints the power button. */
+:root {
+  --night: #0b0f17;
+  --night-2: #141b28;
+  --line: #263044;
+  --muted: #8a95ab;
+  --lamp: #ffd76a;
+  --lamp-glow: rgba(255, 215, 106, .5);
+  --fail: #ff6b6b;
+  --ring: #ffffff;
+  --f-display: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --f-body: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --rainbow: linear-gradient(160deg, #e53935 0%, #fb8c00 16%, #fdd835 32%, #43a047 50%, #29b6f6 66%, #1e6fe5 80%, #8e24aa 100%);
+  color-scheme: dark;
+}
+html, body { height: 100%; margin: 0; }
+[hidden] { display: none !important; }
+body {
+  background: var(--night);
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+.app {
+  box-sizing: border-box;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  align-items: center;
+  padding-block: 20px 36px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+header { text-align: center; color: var(--ring); text-shadow: 0 2px 10px rgba(0,0,0,.45); }
+h1 {
+  margin: 0;
+  font-family: var(--f-display);
+  font-weight: 700;
+  font-size: 1.5rem;
+  letter-spacing: .02em;
+}
+.sub { margin: 6px 0 0; font-family: var(--f-body); font-weight: 600; font-size: .95rem; }
+
+/* Little color screens */
+.screens {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 14px;
+  max-width: 100%;
+}
+.screen {
+  width: min(22vw, 80px, 11vh);
+  aspect-ratio: 2 / 3;
+  max-width: 100%;
+  padding: 0;
+  border-radius: 12px;
+  border: 3px solid var(--night);
+  box-shadow: 0 6px 16px rgba(0,0,0,.35);
+  background:
+    linear-gradient(160deg, rgba(255,255,255,.35), rgba(255,255,255,0) 45%),
+    var(--c);
+  cursor: pointer;
+  transition: transform .12s ease;
+  touch-action: manipulation;
+}
+.screen:active { transform: scale(.92); }
+.screen[aria-pressed="true"] { border-color: var(--ring); box-shadow: 0 0 0 3px var(--night), 0 6px 16px rgba(0,0,0,.35); }
+.screen:focus-visible { outline: 2px solid var(--lamp); outline-offset: 4px; }
+
+/* Power button */
+.power {
+  width: min(44vw, 184px, 22vh);
+  aspect-ratio: 1;
+  max-width: 100%;
+  border-radius: 50%;
+  border: 4px solid var(--night);
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255,255,255,.3), rgba(255,255,255,0) 60%),
+    var(--btn, var(--night-2));
+  color: var(--btn-fg, var(--muted));
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: inset 0 -8px 22px rgba(0,0,0,.35), 0 10px 30px rgba(0,0,0,.45);
+  transition: transform .12s ease, box-shadow .3s ease, color .3s ease, border-color .3s ease, background-color .25s ease;
+  touch-action: manipulation;
+}
+.power svg { width: 40%; height: 40%; }
+.power:active { transform: scale(.95); }
+.power:focus-visible { outline: 3px solid var(--lamp); outline-offset: 5px; }
+.power[aria-pressed="true"] {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 4px var(--night), 0 0 60px rgba(255,255,255,.75), inset 0 0 24px rgba(255,255,255,.25);
+}
+.power.busy { opacity: .6; }
+.power.fail { border-color: var(--fail); animation: shake .4s ease; }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Flashlight</h1>
+    <p class="sub">Tap the button to turn on the light</p>
+  </header>
+
+  <div class="screens" role="group" aria-label="Screen colors">
+    <button class="screen" type="button" aria-pressed="false" aria-label="Red"         data-color="#e53935" style="--c:#e53935"></button>
+    <button class="screen" type="button" aria-pressed="false" aria-label="Orange"      data-color="#fb8c00" style="--c:#fb8c00"></button>
+    <button class="screen" type="button" aria-pressed="false" aria-label="Yellow"      data-color="#fdd835" style="--c:#fdd835"></button>
+    <button class="screen" type="button" aria-pressed="false" aria-label="Light green" data-color="#9ccc65" style="--c:#9ccc65"></button>
+    <button class="screen" type="button" aria-pressed="false" aria-label="Green"       data-color="#2e9e48" style="--c:#2e9e48"></button>
+    <button class="screen" type="button" aria-pressed="false" aria-label="Light blue"  data-color="#29b6f6" style="--c:#29b6f6"></button>
+    <button class="screen" type="button" aria-pressed="false" aria-label="Blue"        data-color="#1e6fe5" style="--c:#1e6fe5"></button>
+    <button class="screen" type="button" aria-pressed="false" aria-label="Indigo"      data-color="#3f3fb5" style="--c:#3f3fb5"></button>
+    <button class="screen" type="button" aria-pressed="false" aria-label="Violet"      data-color="#8e24aa" style="--c:#8e24aa"></button>
+  </div>
+
+  <button id="power" class="power" type="button" aria-pressed="false" aria-label="Turn flashlight on">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+      <path d="M12 3v8"/>
+      <path d="M6.3 6.8a8 8 0 1 0 11.4 0"/>
+    </svg>
+  </button>
+</div>
+
+<script>
+(() => {
+  const power = document.getElementById('power');
+  const screens = Array.from(document.querySelectorAll('.screen'));
+
+  let on = false;
+  let busy = false;
+  let track = null;   // camera track that has the flashlight LED
+  let failTimer = null;
+
+  // ----- Color screens: tap to paint the power button, tap again to go back -----
+  function textOn(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    const r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    return (0.299 * r + 0.587 * g + 0.114 * b) > 160 ? '#000000' : '#ffffff';
+  }
+  screens.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const active = btn.getAttribute('aria-pressed') === 'true';
+      screens.forEach(b => b.setAttribute('aria-pressed', 'false'));
+      if (active) {
+        power.style.removeProperty('--btn');
+        power.style.removeProperty('--btn-fg');
+      } else {
+        btn.setAttribute('aria-pressed', 'true');
+        power.style.setProperty('--btn', btn.dataset.color);
+        power.style.setProperty('--btn-fg', textOn(btn.dataset.color));
+      }
+    });
+  });
+
+  // ----- Flashlight -----
+  function render() {
+    power.setAttribute('aria-pressed', String(on));
+    power.setAttribute('aria-label', on ? 'Turn flashlight off' : 'Turn flashlight on');
+    power.classList.toggle('busy', busy);
+  }
+
+  function showFail() {
+    power.classList.remove('fail');
+    void power.offsetWidth;            // restart the shake animation
+    power.classList.add('fail');
+    power.setAttribute('aria-label', 'Flashlight is not available in this browser');
+    clearTimeout(failTimer);
+    failTimer = setTimeout(() => { power.classList.remove('fail'); render(); }, 1500);
+  }
+
+  function hasTorch(t) {
+    try { const c = t.getCapabilities ? t.getCapabilities() : {}; return !!c.torch; }
+    catch (e) { return false; }
+  }
+
+  async function openTorchTrack() {
+    if (track && track.readyState === 'live') return track;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('nomedia');
+
+    // Try the rear camera first
+    let stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } });
+    let t = stream.getVideoTracks()[0];
+    if (hasTorch(t)) return (track = t);
+    stream.getTracks().forEach(x => x.stop());
+
+    // Some phones have several rear cameras and only one has the flashlight
+    const devices = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+    for (const d of devices.reverse()) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: d.deviceId } } });
+        t = stream.getVideoTracks()[0];
+        if (hasTorch(t)) return (track = t);
+        stream.getTracks().forEach(x => x.stop());
+      } catch (e) { /* try the next one */ }
+    }
+    throw new Error('notorch');
+  }
+
+  function releaseTrack() {
+    if (track) { try { track.stop(); } catch (e) {} track = null; }
+  }
+
+  async function turnOn() {
+    busy = true; render();
+    try {
+      const t = await openTorchTrack();
+      await t.applyConstraints({ advanced: [{ torch: true }] });   // flashlight on
+      on = true;
+    } catch (e) {
+      releaseTrack();
+      on = false;
+      showFail();
+    } finally {
+      busy = false; render();
+    }
+  }
+
+  async function turnOff() {
+    if (track) {
+      try { await track.applyConstraints({ advanced: [{ torch: false }] }); } catch (e) {}
+      releaseTrack();
+    }
+    on = false;
+    render();
+  }
+
+  power.addEventListener('click', () => {
+    if (busy) return;
+    on ? turnOff() : turnOn();
+  });
+
+  // Leaving the page turns the flashlight off
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && on) turnOff();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
